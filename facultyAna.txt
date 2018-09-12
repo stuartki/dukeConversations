@@ -1,0 +1,34 @@
+original algorithm
+[('chafe', 44.11), ('bletsch', 43.3), ('newpher', 40.04), ('smith', 38.32), ('nowicki', 38.11), ('daily', 37.03), ('huettel', 36.68), ('riddell', 36.09), ('napoli', 35.87), ('morton', 34.77), ('ng', 34.55), ('connolly', 32.65), ('bergin', 30.6), ('leachman', 30.4), ('carin', 29.08), ('casa', 21.41), ('beardsley', 21.19), ('murphy', 20.52), ('french', 19.57), ('forbes', 19.48), ('roberts', 18.11), ('merkx', 15.29), ('gereffi', 14.84), ('mayer', 14.64), ('bucholz', 14.3), ('jenson', 13.42), ('fullenkamp', 12.89), ('folch', 9.99), ('meyers', 9.86), ('waitzkin', 9.81), ('jentleson', 9.35), ('adair', 8.92), ('chilkoti', 6.05), ('pusey', 5.77), ('hilton', 5.55), ('blount', 2.6), ('hartemink', 1.73)]
+only counts > 5
+[('chafe', 35.74), ('bletsch', 35.24), ('newpher', 32.09), ('nowicki', 30.47), ('smith', 30.47), ('huettel', 30.22), ('daily', 30.22), ('riddell', 29.97), ('napoli', 29.97), ('morton', 29.0), ('ng', 29.0), ('connolly', 27.38), ('leachman', 25.35), ('bergin', 25.35), ('carin', 24.1), ('casa', 16.85), ('beardsley', 16.8), ('murphy', 16.29), ('french', 15.65), ('forbes', 15.59), ('roberts', 14.33), ('merkx', 11.64), ('mayer', 11.39), ('gereffi', 11.39), ('bucholz', 11.24), ('jenson', 10.62), ('fullenkamp', 10.42), ('jentleson', 7.67), ('folch', 7.67), ('waitzkin', 7.67), ('meyers', 7.67), ('adair', 7.57), ('chilkoti', 5.02), ('hilton', 4.9), ('pusey', 4.9), ('blount', 2.05), ('hartemink', 1.51)]
+counts normalized by major numbers
+[('chafe', 1.13), ('bletsch', 1.06), ('newpher', 1.01), ('smith', 0.97), ('nowicki', 0.96), ('daily', 0.92), ('huettel', 0.91), ('riddell', 0.89), ('napoli', 0.88), ('morton', 0.86), ('ng', 0.85), ('connolly', 0.81), ('bergin', 0.78), ('leachman', 0.76), ('carin', 0.74), ('casa', 0.60), ('beardsley', 0.59), ('murphy', 0.57), ('french', 0.55), ('forbes', 0.59), ('roberts', 0.50), ('merkx', 0.45, ('gereffi', 0.42), ('mayer', 0.42), ('bucholz', 0.41), ('jenson', 0.36), ('fullenkamp', 0.34), ('folch', 0.294), ('meyers', 0.286), ('waitzkin', 0.282), ('jentleson', 0.262), ('adair', 0.23), ('chilkoti', 0.166), ('pusey', 0.146), ('hilton', 0.135), ('blount', 0.076), ('hartemink', 0.049)]
+counts normalized by major numbers && only counts > 5
+[('chafe', 62.68), ('bletsch', 58.65), ('newpher', 53.42), ('nowicki', 50.85), ('smith', 50.85), ('huettel', 50.45), ('daily', 50.45), ('riddell', 50.06), ('napoli', 50.06), ('morton', 48.33), ('ng', 48.33), ('connolly', 45.76), ('leachman', 42.77), ('bergin', 42.77), ('carin', 40.87), ('casa', 28.91), ('beardsley', 28.83), ('murphy', 27.29), ('french', 26.27), ('forbes', 25.61), ('roberts', 24.15), ('merkx', 20.43), ('mayer', 20.04), ('gereffi', 20.04), ('bucholz', 19.8), ('jenson', 17.82), ('fullenkamp', 17.51), ('jentleson', 13.22), ('folch', 13.22), ('waitzkin', 13.22), ('meyers', 13.22), ('adair', 13.06), ('chilkoti', 9.24), ('hilton', 8.88), ('pusey', 8.88), ('blount', 3.79), ('hartemink', 3.07)]
+counts normalized by major numbers %% only counts > 5 && counts normalized by attendance
+[('french', 65.75), ('morton', 48.3), ('smith', 46.27), ('connolly', 41.64), ('leachman', 38.91), ('napoli', 38.54), ('casa', 36.13), ('riddell', 35.79), ('bergin', 35.67), ('bletsch', 34.53), ('daily', 33.67), ('newpher', 33.38), ('meyers', 26.4), ('gereffi', 25.0), ('chafe', 22.39), ('huettel', 21.96), ('ng', 21.95), ('beardsley', 20.57), ('mayer', 20.0), ('forbes', 17.07), ('folch', 14.67), ('nowicki', 14.54), ('murphy', 14.37), ('merkx', 13.6), ('roberts', 13.39), ('chilkoti', 11.5), ('bucholz', 9.9), ('jenson', 9.37), ('carin', 8.35), ('fullenkamp', 7.95), ('jentleson', 7.76), ('waitzkin', 7.76), ('pusey', 7.42), ('hilton', 5.56), ('adair', 3.45), ('blount', 2.38), ('hartemink', 1.19)]
+counts normalized by attendance
+[('french', 4.89), ('smith', 3.48), ('morton', 3.48), ('connolly', 2.97), ('napoli', 2.76), ('leachman', 2.76), ('casa', 2.68), ('riddell', 2.58), ('bletsch', 2.55), ('bergin', 2.55), ('newpher', 2.5), ('daily', 2.47), ('meyers', 1.97), ('gereffi', 1.85), ('huettel', 1.59), ('chafe', 1.58), ('ng', 1.57), ('beardsley', 1.51), ('mayer', 1.46), ('forbes', 1.3), ('folch', 1.11), ('nowicki', 1.09), ('murphy', 1.08), ('merkx', 1.02), ('roberts', 1.01), ('chilkoti', 0.76), ('bucholz', 0.72), ('jenson', 0.71), ('carin', 0.59), ('fullenkamp', 0.59), ('waitzkin', 0.58), ('jentleson', 0.55), ('pusey', 0.48), ('hilton', 0.35), ('adair', 0.23), ('blount', 0.16), ('hartemink', 0.07)]
+
+
+What are the points of this analysis?
+
+1. To use pandas efficiently
+2. To graph efficiently
+3. To organize data efficiently
+4. Standardize
+
+timestamp
+dinner information
+student information
+
+1. Are we getting diverse conversation?
+	is this only career oriented?
+	across all dinners
+	and within dinners
+2. Are our professors diverse?
+	individual dinner analysis
+3. Are our students diverse?
+4. What percentage of the population are we getting?
+5. logistical analysis: timings, major reach out
