@@ -204,7 +204,7 @@ def facRelaterRating(para, data, G, faculty = "all"):
 	d = pd.merge(left = fac, right = data, left_on = 'FacultyKey', right_on = 'prof').set_index('prof')
 	max = 0.
 	for f in faculty:
-
+		facRating = 0
 		tempD = d.loc[f]
 		for ind, x in tempD.iterrows():
 			dep = [str(x['Department'])]
@@ -245,7 +245,7 @@ def relationsMajorGrapher():
 	
 	da = pd.concat([d, d2, d3], sort = True)
 	facD =  da['major'].value_counts()
-
+	
 
 	count = 0
 	for index, x in da.iterrows():
@@ -371,11 +371,12 @@ def dinner_info(para, data, fac, plot_major = False):
  		plt.xticks(locs, newLabels(labs))
 		plt.show()
 
+	
 
 ##WORKSPACE
 
 
-indict = 1
+indict = 6
 if indict == 1:
 	# print dataSpring2018.info()
 	
@@ -403,6 +404,9 @@ if indict == 2:
 	plt.show()
 	print dictSorter(frr, rev = "reverse")
 	print dictSorter(anr, rev = "reverse")
+	
+	dxl = pd.DataFrame.from_dict(anr.items())
+	print dxl.describe()
 # 	
 # 	for n in sorted([(k, (frr[k] + anr[k])/2) for k in para['FacultyKey'].unique()], key = operator.itemgetter(1), reverse = True):
 # 		print n[0] + '\t' + str(n[1])
@@ -507,6 +511,12 @@ if indict == 5:
 	print para3['Department'].value_counts()
 	print sum(para['Department'].value_counts())
 	print sum(para3['Department'].value_counts())
+	
+if indict == 6:
+	data = dataFall2018
+	para = dictifierFall2018()
+	print dictSorter(attNormalizeRater(para, data, relationsMajorGrapher()))
+
 ##WORKSPACE
 
 
