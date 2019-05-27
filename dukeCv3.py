@@ -1,396 +1,271 @@
+#general methods for analyzing duke conversations data
+#relations_major_grapher - graph of edges between department and majors
+#dinner_info
 import csv
 import operator
 from datetime import datetime
 import numpy as np
 import pandas as pd
-from collections import Counter
+from collections import Counter, defaultdict
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
-from itertools import islice
+from itertools import islice, combinations, combinations_with_replacement
 import math
 import networkx as nx
+from algorithms import isSimilar
+import math
+import time
+import operator as op
+from functools import reduce
 
-dataSpring2018 = pd.ExcelFile('spring2018.xlsx').parse(0)
-dataFall2017 = pd.ExcelFile('fall2017.xlsx').parse(0)
+from rater import fac_relate_rating, att_normalize_rater, first_acceptances
 
-##rating INDICTS
-majIndict = 1
-attIndict = 1
-count5Indict = 1
+#returns dictionary of data and parameters
+def init():
+    path = '/Users/stuartki/Dropbox/dukeConversations/'
 
+    data_spring2018 = pd.ExcelFile('spring2018.xlsx').parse(0)
+    data_fall2017 = pd.ExcelFile('fall2017.xlsx').parse(0)
+    data_fall2018 = pd.ExcelFile('fall2018.xlsx').parse(0)
+    total_data = pd.concat([data_spring2018, data_fall2017, data_fall2018], sort = True)
 
-#returns dukeConvoosParameters in dict, dataSpring2018frame
-def dictifier2018():
-	dateDict = {}
-	with open('dukeConvoosParameters.csv', 'rb') as csvfile:
-		dukeConvoosParameters = csv.reader(csvfile)
-		
-		for row in islice(dukeConvoosParameters,85,122):
-			dateDict[row[0]] = row[1:8]
-	paraSpring2018 = pd.read_csv('dukeConvoosParameters.csv', skiprows = 84, skipfooter = 31, engine = 'python')
-	paraSpring2018 = paraSpring2018.iloc[:,:9]
-	paraSpring2018['Date'] = pd.to_datetime(paraSpring2018['Date'], format = '%m/%d/%y')
-	return dateDict, paraSpring2018
-	
-def dictifier2017():
-	dateDict = {}
-	with open('dukeConvoosParameters.csv', 'rb') as csvfile:
-		dukeConvoosParameters = csv.reader(csvfile)
-		
-		for row in islice(dukeConvoosParameters,125,152):
-			dateDict[row[0]] = row[1:8]
-	paraSpring2018 = pd.read_csv('dukeConvoosParameters.csv', skiprows = 124)
-	paraSpring2018 = paraSpring2018.iloc[:,:9]
-	return dateDict, paraSpring2018
+    #returns dinner parameters
+    para_spring2018 = pd.ExcelFile(path + 'Spring2018Parameters.xlsx').parse(0)
+    para_fall2017 = pd.ExcelFile(path + 'Fall2017Parameters.xlsx').parse(0)
+    para_fall2018 = pd.ExcelFile(path + 'Fall2018Parameters.xlsx').parse(0)
 
-#cleans duplicates in certain col_name
+    return {"spring2018": (data_spring2018, para_spring2018),
+            "fall2017": (data_fall2017, para_fall2017),
+            "fall2018": (data_fall2018, para_fall2018),
+            "total": total_data}
+
+def ncr(n, r):
+    r = min(r, n-r)
+    numer = reduce(op.mul, range(n, n-r, -1), 1)
+    denom = reduce(op.mul, range(1, r+1), 1)
+    return numer/denom
+
+#cleans duplicates in certain col_name - USE ONCE
 def cleaner(data, col_name):
 	re = data.drop_duplicates(subset = col_name, keep = 'first')
 	re.to_csv('fall2017test.csv', index = False)
 
-#distribution of all majors
-def majorGrapher():
-	ti = dataSpring2018['major'] 
-	ticc = Counter(ti)
-	
-	df = pd.dataFrame.from_dict(ticc, orient='index')
-	
-	#plt.rcParams['xtick.bottom'] = plt.rcParams['xtick.labelbottom'] = False
-	#plt.rcParams['xtick.top'] = plt.rcParams['xtick.labeltop'] = True
-	
-	df.plot(kind='bar', fontsize = 10)
-
-	#annoying label changer
-	#condition for nan
-	locs, labs = plt.xticks()
-	ti = dataSpring2018['major']
-	newLabs = ['nan']
-	newLabs.extend([labeler(ti)[x.get_text()] for x in labs if x.get_text() !='nan'])
-	plt.xticks(locs, newLabs)
-
-
-	plt.tight_layout()	
-	plt.style.use('ggplot')
-	plt.show()
-	
 #shorter label markers
-def labeler(series):
-
+def labeler(data):
+	majors = set(data['major'].unique())
 	dict = {}
-	for x in series.unique():
+	for x in majors:
 		if x == "Biomedical Engineering":
 			dict[x] = "BME"
 			continue
 		dict[x] = str(x)[:2]
 	return dict
-	
-#distribution of times by month
-def timeGrapher():
-	ti = dataSpring2018['timestamp']
-	tiMonth = [datetime.strptime(n, '%m/%d/%y %H:%M').day for n in ti]
-	ticc = Counter(tiMonth)
-	
-	df = pd.dataFrame.from_dict(ticc, orient='index')
-	
-	plt.rcParams['xtick.bottom'] = plt.rcParams['xtick.labelbottom'] = True
-	plt.rcParams['xtick.top'] = plt.rcParams['xtick.labeltop'] = False
-	
-	df.plot(kind='bar', fontsize = 5)
-	plt.show()
 
-#distribution of majors by certain dinners
-def facultyMajorDist(num = 0, facList = []):
+#labels for nan
+def new_labels(labs, data):
+	newLabs = [labeler(data)[x.get_text()] for x in labs if x.get_text() !='nan']
+	newLabs.append('nan')
+	return newLabs
 
-	count = 1
-	dict, para = dictifier2018()
-
-	
-	if num == 0 and len(facList) == 0:
-		
-		num = para.shape[0]
-		list = para['FacultyKey']
-	elif len(facList) == 0:
-		list = para['FacultyKey'].head(num)
-	else:
-		list = facList
-		num = len(facList)
-	
-	
-
-	for x in list:
-		plt.style.use('ggplot')
-		plt.subplot(num, 1, count)
-
-		facDist = dataSpring2018[dataSpring2018['prof'] == x]['major'].value_counts()
-		facDist.plot(kind = 'bar')
-		plt.title(x + ": " + dict[x][0])
-		plt.legend()
-		
-		
-		#change labels
-		locs, labs = plt.xticks()
-		ti = dataSpring2018['major']
-		newLabs = [labeler(ti)[x.get_text()] for x in labs]
-		plt.xticks(locs, newLabs)
-
-		count += 1
-	plt.tight_layout()
-	plt.show()
-	return facDist
-
-#return professors of "x" department
-def departmentFinder(dep):
-	para = dictifier2018()[1]
-	para['strsplit'] = para.Department.str.split("|")
-	para['trueFalse'] = para['strsplit'].apply(lambda x: 'true' if dep in x else 'false') == 'true'
-	profsDep = para[para['trueFalse']]
-	return profsDep
-
-def facRelaterRating(G, faculty = "all"):
-
-	facRatingDict = {}
-	facRating = 0
-	para = dictifier2018()[1]
-	if faculty == "all":
-		faculty = para['FacultyKey'].unique()
-
-
-	paraSet = para.set_index('FacultyKey')
-	fac = paraSet.loc[faculty]
-	
-	d = pd.merge(left = fac, right = dataSpring2018, left_on = 'FacultyKey', right_on = 'prof').set_index('prof')
-
-
-	for f in faculty:
-
-		tempD = d.loc[f]
-		for ind, x in tempD.iterrows():
-			dep = x['Department']
-			maj = x['major']
-			if isinstance(maj, float) or isinstance(dep, float):
-				continue
-				
-			##### METHOD
-			if count5Indict == 1:
-				if G[dep][maj]['count'] < 5:
-					continue
-			##### METHOD
-			facRating += G[dep][maj]['weight']
-		facRatingDict[f] = round(float(facRating), 2)
-	return facRatingDict
-	
-def relationsMajorGrapher():
-	G = nx.Graph()
-
-	para = dictifier2018()[1]
-	para2 = dictifier2017()[1]
-
-	d = pd.merge(right = para, left = dataSpring2018, right_on = 'FacultyKey', left_on = 'prof')
-	d2 = pd.merge(right = para2, left = dataFall2017, right_on = 'FacultyKey', left_on = 'prof')
-	da = pd.concat([d, d2], sort = True)
-
-	facD =  da['major'].value_counts()
-
-	count = 0
-	for index, x in da.iterrows():
-		maj = str(x['major'])
-		dep = str(x['Department'])
-
-		if maj == 'nan' or dep == 'nan':
-			continue
-		
-		##### METHOD	
-		if majIndict == 1:	
- 			normalize = float(facD.loc[maj])
-		else:
-			normalize = 1.
-		#####METHOD
-
-
-		if G.has_edge(dep, maj):
-			G[dep][maj]['weight'] += 1./normalize
-			G[dep][maj]['count'] +=1
-			if G[dep][maj]['count'] > 5:
-				count +=1
-		else:
-			G.add_edge(dep, maj, weight = 1./normalize)
-			G.add_edge(dep, maj, count = 1)
-	return G
-
-def dictSorterItems(x, rev = ""):
+#sort dictionary by values, or keys given index
+def dict_sorter(x, rev = "", index = 1):
 	if rev == "reverse":
 		r = True
 	else:
 		r = False
-	sorted_x = sorted(x.items(), key=operator.itemgetter(1), reverse = r)
+	sorted_x = sorted(x.items(), key=operator.itemgetter(index), reverse = r)
 	return sorted_x
-
-def attIndictRater(G):
-	refSeries = dataSpring2018['prof'].value_counts()
-	total = 0.
-	for x in refSeries:
-		total += float(x)
-	print total
-	sorted_dick = dictSorterItems(facRelaterRating(G), rev = "reverse")
-	for x in range(len(sorted_dick)):
-		prof = sorted_dick[x][0]
-		sorted_dick[x] = (prof, round(total*sorted_dick[x][1]/float(refSeries.loc[prof]), 2), refSeries.loc[prof])
-		
-
-	s = sorted(sorted_dick, key=operator.itemgetter(1), reverse = True)
-
-	return s
 	
-def firstAcceptances(data, plot = False):
-	s = set()
-	refSeries = data['prof'].value_counts()
+#distribution of all majors
+def major_grapher(data):
+	data['major'].value_counts().plot(kind = 'bar', fontsize = 10)
 
-	delIndex = []
-	data = data.reset_index()
-	data = data.sort_values(by = ['timestamp'])
-	for index, row in data.iterrows():
-		if row['unique id'] in s:
-			delIndex.append(index)
-		else:
-			s.add(row['unique id'])
-
-	d = data.drop(delIndex)['prof'].value_counts()
-
-
-	ha = {}
-	for index, value in d.items():
-		ha[index] = float(value)/float(refSeries[index])
-	fA = dictSorterItems(ha, rev = "reverse")
-	
-	if plot:
-		d.plot.bar()
-		plt.tight_layout()
-		plt.style.use('ggplot')
-		plt.show()
-	
-	return ha
-
-def dinner_info(fac, plot_major = False):
-
-	##DATA
-	
-	dinner = dataSpring2018[dataSpring2018['prof'] == fac]
-	dep = para[para['FacultyKey'] == fac]['Department'].values[0]
-	G = relationsMajorGrapher()
-	s = [(n[0], round(n[1], 2)) for n in sorted([(n, G[dep][n]['weight']) for n in G.neighbors(dep)], key = operator.itemgetter(1), reverse = True)[:5]]
-	raterDict = {}
-	r = attIndictRater(G)
-	fADict = firstAcceptances(dataSpring2018) 
-	max = r[0][1]
-
-	for x in attIndictRater(G):
-		print x
-		raterDict[x[0]] = round(x[1]/max, 2)
-
-
-	##DATA
-	
-	print para[para['FacultyKey'] == fac]['FacultyName'].values[0]
-	print "Department: " + para[para['FacultyKey'] == fac]['Department'].values[0]
-	print "Number of Students: " + str(len(dinner))
-	print "Date: " + str(para[para['FacultyKey'] == fac]['Date'].values[0])
-	print "Related Majors: " + str(s)
-	print "Major Diversity Rating Score: " + str(raterDict[fac])
-	print "First Acceptance Score: " + str(round(fADict[fac], 2))
- 	
- 		
-	if plot_major:
-		plt.style.use('ggplot')
-		dinner['major'].value_counts().plot.bar()
-# 		locs, labs = plt.xticks()
-# 		ti = dataSpring2018['major']
-# 		newLabs = [labeler(ti)[x.get_text()] for x in labs]
-# 		plt.xticks(locs, newLabs)
-		plt.tight_layout()
-		plt.show()
-
-##WORKSPACE
-
-
-indict = 4
-if indict == 1:
-	# print dataSpring2018.info()
-	
-	d, para = dictifier2018()
-	# print para.info()
-	
-	department = "Computer Science"
-	
-	facultyMajorDist(num = 3)
-	
-	#dinner_info('hartemink', plot_major = True)
-	
-	
-	
-	
-	
-	
- 	#facultyMajorDist(facList = departmentFinder(department)['FacultyKey'].values)
-	
-if indict == 2:
-	
-	G = relationsMajorGrapher()
-	dep = 'English'
-	s =  sorted([(n, G[dep][n]['weight']) for n in G.neighbors(dep)], key = operator.itemgetter(1), reverse = True)
-	print s
-	print attIndictRater(G)
-	
-	
-if indict == 3:
-	d, para = dictifier2018()
- 	para['Date'] = pd.to_datetime(para['Date'], format = '%m/%d/%y')
- 	para = para.sort_values(by = ['Date'])
-
-	print para[['FacultyKey', 'Date']].head(10)
-
-	s = set()
-	refSeries = dataSpring2018['prof'].value_counts()
-	delIndex = []
-	dataSpring2018 = dataSpring2018.reset_index()
-	dataSpring2018 = dataSpring2018.sort_values(by = ['timestamp'])
-
-	for index, row in dataSpring2018.iterrows():
-		if row['unique id'] in s:
-			delIndex.append(index)
-		else:
-			s.add(row['unique id'])
-
-	d = dataSpring2018.drop(delIndex)['prof'].value_counts()
-
-
-	ha = {}
-	for index, value in d.items():
-		ha[index] = round(float(value)/float(refSeries[index]), 2)
-	
-	y = []
-	for index, row in para.iterrows():
-		y.append(ha[row['FacultyKey']])
-		print row['FacultyKey'] + ": " +  str(ha[row['FacultyKey']])
-	plt.plot(y)
-
-	
-# 	d.plot.bar()
+	#plt.rcParams['xtick.bottom'] = plt.rcParams['xtick.labelbottom'] = False
+	#plt.rcParams['xtick.top'] = plt.rcParams['xtick.labeltop'] = True
+	#annoying label changer
+	locs, labs = plt.xticks()
+	plt.xticks(locs, new_labels(labs, data))
 	plt.tight_layout()
-	plt.style.use('ggplot')
 	plt.show()
 	
-if indict == 4:
-	d, para = dictifier2018()
-	dinner_info('adair')
+#return professors of "x" department
+def department_finder(parameters, dep):
 
-##WORKSPACE
+	parameters['strsplit'] = parameters.Department.str.split("|")
+	parameters['trueFalse'] = parameters['strsplit'].apply(lambda x: 'true' if dep in x else 'false') == 'true'
+	profsDep = parameters[parameters['trueFalse']]
+	return profsDep
+
+#distribution of majors by certain dinners
+def faculty_major_dist(data, para, num = 0, fac_list = [], plot = False):
+	#initialize num and fac_list
+	if num == 0 and len(fac_list) == 0:
+		num = para.shape[0]
+		list = para['FacultyKey']
+	elif len(fac_list) == 0:
+		list = para['FacultyKey'].head(num)
+	else:
+		list = fac_list
+		num = len(fac_list)
+	
+	count = 1
+	#plot for each faculty in list
+	for x in list:
+		plt.subplot(num, 1, count)
+
+		facDist = data[data['prof'] == x]['major'].value_counts()
+		facDist.plot(kind = 'bar')
+		plt.title(x)
+		plt.legend()
+		#change labels
+		locs, labs = plt.xticks()
+		plt.xticks(locs, new_labels(labs, data))
+		count += 1
+	if plot:
+		plt.tight_layout()
+		plt.show()
+	#return the list of major counts
+	return facDist
+	
+#find all faculty major distributions of a department
+def dep_major_dist(data, para, department):
+	faculty_major_dist(data, para, fac_list = department_finder(para, department)['FacultyKey'].values)
+
+#graph of relations between FACULTY 'Department' and STUDENT 'major'
+def relations_major_grapher():
+	G = nx.Graph()
+	initial = init()
+	data_spring2018 = initial['spring2018'][0]
+	data_fall2017 = initial['fall2017'][0]
+	data_fall2018 = initial['fall2018'][0]
+	para = initial['spring2018'][1]
+	para2 = initial['fall2017'][1]
+	para3 = initial['fall2018'][1]
+
+    #merge the two datasets to combine faculty and student data
+	d = pd.merge(right = para, left = data_spring2018, right_on = 'FacultyKey', left_on = 'prof')
+	d2 = pd.merge(right = para2, left = data_fall2017, right_on = 'FacultyKey', left_on = 'prof')
+	d3 = pd.merge(right = para3, left = data_fall2018, right_on = 'FacultyKey', left_on = 'prof')
+	
+    #total data for all semesters
+	da = pd.concat([d, d2, d3], sort = True)
+	facD =  da['major'].value_counts()
+	
+
+	count = 0
+	for index, x in da.iterrows():
+        #get major and department of student and faculty
+		maj = str(x['major'])
+		if '|' in maj:
+            #check if this input system is still in play
+			print("MULTIPLE: " + maj)
+
+		dep = [str(x['Department'])]
+		if '|' in dep[0]:
+			dep = dep[0].split('|')
+		if maj == 'nan' or dep == 'nan':
+			continue
+        
+		##### normalize over the total number of majors in the whole dataset	
+		#an individual has higher weight if a pairing is UNLIKELY
+		normalize = float(facD.loc[maj])
+
+
+		#populate the undirected graph
+		for n in dep:
+			if G.has_edge(n, maj):
+				G[n][maj]['weight'] += 1./normalize
+				G[n][maj]['count'] +=1
+				if G[n][maj]['count'] > 5:
+					#count variable just to test
+					count +=1
+			else:
+				G.add_edge(n, maj, weight = 1./normalize)
+				G.add_edge(n, maj, count = 1)
+	return G
 
 
 
+#summary of data
+def dinner_info(data, para, fac, plot_major = False):
+
+	##DATA
+	fADict, d = first_acceptances(data)
+
+	dinner = d[d['prof'] == fac]
+	paraDin = para[para['FacultyKey'] == fac]
+	G = relations_major_grapher()
+
+	#get "related majors" from relations graph
+	dep = [paraDin['Department'].values[0]]
+	if '|' in dep[0]:
+		dep = dep[0].split('|')
+	arr = []
+	for x in dep:
+		arr.extend([(n, G[x][n]['weight']) for n in G.neighbors(x)])
+	s = [(n[0], round(n[1], 2)) for n in sorted(arr, key = operator.itemgetter(1), reverse = True)[:5]]
+	
+	
+	r = att_normalize_rater(data, para, G)
+	facRelRat = fac_relate_rating(data, para,G)
 
 
+	##DATA
+	
+	print(paraDin['FacultyName'].values[0])
+	print("Department: " + paraDin['Department'].values[0].replace('|', ', '))
+	print("Number of Students: " + str(len(dinner)))
+	print("Date: " + str(paraDin['Date'].values[0]))
+	print("Related Majors: " + str(s))
+	print("Major-Diversity Rating (AN): " + str(r[fac]))
+	print("Major Diversity Rating: " + str(facRelRat[fac]))
+	print("First Acceptance Score: " + str(round(fADict[fac], 2)))   
 
+  # depth = raw_input("depth?")
+  # if depth == "y" or depth == "yes":
+ 	# 	dinner = dinner.set_index('name')
+ 	# 	print(dinner[['major', 'firstAvalue']])
+ 		
+	if plot_major:
+		plt.clf()
+		plt.title(fac)
+		dinner['major'].value_counts().plot.bar()
+		locs, labs = plt.xticks()
+		plt.xticks(locs, new_labels(labs, data))
+		plt.show()
 
+#needs to be shortened, more efficient
+#STILL IN WORK
+def probFinder_v1(G, dep, n, score):
+	count = 0
+	totcount = 0
+	timeMinus = 0.
+	de = 0.
+	m = len(G.edges(dep))
+	total = float(float(math.factorial(m + n - 1.))/(float(math.factorial(n))*float(math.factorial(m-1))))
+
+	trueStart = time.time()
+
+	for c in combinations_with_replacement(G.edges(dep), n):
+		curScore = 0.
+		start = time.time()
+		for e in c:
+			curScore += G[e[0]][e[1]]['weight']
+		if curScore > score:
+			count+=1
+		totcount +=1
+		end = time.time()
+		de = (de*float(totcount-1) + end - start)/float(totcount)
+		timeMinus = end - trueStart
+		if totcount % 1000000 == 0:
+			print("TIME TAKEN = " + str(round(timeMinus/60., 2)) + " minutes")
+			print("TIME LEFT = " + str(round(de * total/60. - timeMinus/60., 2)) + " minutes")
+	print("PROBABILITY: Score > " + str(score) + " = " + str(float(count)/float(totcount)))
+	return float(count)/float(totcount)
+
+#STILL NEEDS WORK
+
+	
 
 
 
